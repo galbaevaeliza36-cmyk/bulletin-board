@@ -1,170 +1,233 @@
-import { useState } from 'react';
+
+import { useState, type FormEvent } from 'react';
 import './App.css';
 
+const API_URL = 'https://inai-col1.fishrungames.com/ads';
+const API_ORIGIN = 'https://inai-col1.fishrungames.com';
+
 type Ad = {
-  id: number;
+  id?: number | string;
   title: string;
   description: string;
-  price: number;
-  category: string;
+  price: number | string;
+  image_url?: string;
 };
 
 function App() {
-  const [ads, setAds] = useState<Ad[]>(() => {
-    const savedAds = localStorage.getItem('ads');
+  const [ads, setAds] = useState<Ad[]>([]);
+  const [showAds, setShowAds] = useState(false);
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
 
-    if (savedAds) {
-      return JSON.parse(savedAds) as Ad[];
+  // Загрузка объявлений
+  async function loadAds() {
+    setShowAds(true);
+    setLoading(true);
+    setMessage('');
+
+    try {
+      const response = await fetch(API_URL);
+
+      if (!response.ok) {
+        throw new Error(`Ошибка сервера: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      const items: Ad[] = Array.isArray(data) ? data : data.items;
+
+      if (!Array.isArray(items)) {
+        throw new Error('Неверный формат данных');
+      }
+
+      setAds(items);
+    } catch (error) {
+      console.error('Ошибка загрузки:', error);
+      setMessage('Не удалось загрузить объявления.');
+      setAds([]);
+    } finally {
+      setLoading(false);
     }
-
-    return [
-      {
-        id: 1,
-        title: 'Ноутбук Lenovo',
-        description: 'Хороший ноутбук для учёбы.',
-        price: 35000,
-        category: 'Электроника',
-      },
-      {
-        id: 2,
-        title: 'Квартира в Бишкеке',
-        description: 'Уютная квартира в центре города.',
-        price: 45000,
-        category: 'Недвижимость',
-      },
-    ];
-  });
-
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [price, setPrice] = useState('');
-  const [category, setCategory] = useState('Электроника');
-  const [search, setSearch] = useState('');
-
-  function saveAds(newAds: Ad[]) {
-    setAds(newAds);
-    localStorage.setItem('ads', JSON.stringify(newAds));
   }
 
-  function addAd(event: React.FormEvent<HTMLFormElement>) {
+  // Добавление объявления
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const newAd: Ad = {
-      id: Date.now(),
-      title: title,
-      description: description,
-      price: Number(price),
-      category: category,
-    };
+    const form = event.currentTarget;
+    const formData = new FormData(form);
 
-    saveAds([...ads, newAd]);
+    setMessage('Публикация объявления...');
 
-    setTitle('');
-    setDescription('');
-    setPrice('');
-    setCategory('Электроника');
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Ошибка сервера: ${response.status}`);
+      }
+
+      setMessage('Объявление успешно опубликовано!');
+      form.reset();
+
+      await loadAds();
+    } catch (error) {
+      console.error('Ошибка публикации:', error);
+      setMessage('Не удалось опубликовать объявление.');
+    }
   }
 
-  function deleteAd(id: number) {
-    const newAds = ads.filter((ad) => ad.id !== id);
-    saveAds(newAds);
-  }
+  // Удаление объявления сразу после нажатия
+  async function deleteAd(id: number | string) {
+    // Сохраняем текущий список на случай ошибки
+    const previousAds = ads;
 
-  const filteredAds = ads.filter((ad) =>
-    ad.title.toLowerCase().includes(search.toLowerCase())
-  );
+    // Сразу убираем объявление со страницы
+    setAds((currentAds) =>
+      currentAds.filter((ad) => String(ad.id) !== String(id))
+    );
+
+    setMessage('');
+
+    try {
+      const response = await fetch(
+        `${API_URL}/${encodeURIComponent(String(id))}`,
+        {
+          method: 'DELETE',
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Ошибка сервера: ${response.status}`);
+      }
+
+      setMessage('Объявление удалено!');
+    } catch (error) {
+      console.error('Ошибка удаления:', error);
+
+      // Возвращаем объявление, если сервер не удалил его
+      setAds(previousAds);
+      setMessage(
+        'Не удалось удалить объявление на сервере. Попробуй ещё раз.'
+      );
+    }
+  }
 
   return (
-    <div className="container">
+    <>
       <header>
         <h1> Доска объявлений</h1>
-        <p>Добавляй, просматривай и удаляй объявления</p>
+        <p>Размещайте и находите нужные объявления</p>
       </header>
 
-      <section className="form-section">
-        <h2>Добавить объявление</h2>
+      <main>
+        <section className="form-section">
+          <h2>Добавить объявление</h2>
 
-        <form onSubmit={addAd}>
-          <input
-            type="text"
-            placeholder="Название объявления"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            required
-          />
+          <form id="adForm" onSubmit={handleSubmit}>
+            <label htmlFor="title">Название</label>
+            <input
+              type="text"
+              id="title"
+              name="title"
+              placeholder="Например: Продаю ноутбук"
+              required
+            />
 
-          <textarea
-            placeholder="Описание объявления"
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            required
-          />
+            <label htmlFor="description">Описание</label>
+            <textarea
+              id="description"
+              name="description"
+              placeholder="Напишите описание товара"
+              required
+            />
 
-          <input
-            type="number"
-            placeholder="Цена в сомах"
-            value={price}
-            onChange={(event) => setPrice(event.target.value)}
-            min="1"
-            required
-          />
+            <label htmlFor="price">Цена</label>
+            <input
+              type="number"
+              id="price"
+              name="price"
+              placeholder="Например: 45000"
+              min="0"
+              step="0.01"
+              required
+            />
 
-          <select
-            value={category}
-            onChange={(event) => setCategory(event.target.value)}
-          >
-            <option>Электроника</option>
-            <option>Недвижимость</option>
-            <option>Работа</option>
-            <option>Одежда</option>
-            <option>Другое</option>
-          </select>
+            <label htmlFor="image">Изображение</label>
+            <input
+              type="file"
+              id="image"
+              name="image"
+              accept="image/*"
+            />
 
-          <button type="submit">Добавить объявление</button>
-        </form>
-      </section>
+            <button type="submit">Опубликовать объявление</button>
+          </form>
 
-      <section className="ads-section">
-        <h2>Все объявления ({filteredAds.length})</h2>
+          <p id="message" role="status">
+            {message}
+          </p>
+        </section>
 
-        <input
-          className="search"
-          type="text"
-          placeholder="Найти объявление..."
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-        />
+        <section className="ads-section">
+          <div className="ads-header">
+            <h2>Все объявления</h2>
 
-        <div className="ads-list">
-          {filteredAds.map((ad) => (
-            <article className="ad-card" key={ad.id}>
-              <h3>{ad.title}</h3>
+            <button
+              className="show-ads-button"
+              type="button"
+              onClick={loadAds}
+            >
+              {showAds ? 'Обновить объявления' : 'Посмотреть объявления'}
+            </button>
+          </div>
 
-              <p>{ad.description}</p>
+          {showAds && (
+            <div id="adsList">
+              {loading ? (
+                <p>Загрузка объявлений...</p>
+              ) : ads.length === 0 ? (
+                <p>Объявлений пока нет.</p>
+              ) : (
+                ads.map((ad, index) => (
+                  <article className="ad-card" key={ad.id ?? index}>
+                    {ad.image_url && (
+                      <img
+                        src={
+                          ad.image_url.startsWith('http')
+                            ? ad.image_url
+                            : `${API_ORIGIN}${ad.image_url}`
+                        }
+                        alt={ad.title}
+                      />
+                    )}
 
-              <p>
-                <strong>Категория:</strong> {ad.category}
-              </p>
+                    <h3>{ad.title}</h3>
+                    <p>{ad.description}</p>
 
-              <p className="price">
-                {ad.price.toLocaleString('ru-RU')} сом
-              </p>
+                    <div className="price">
+                      {Number(ad.price).toLocaleString('ru-RU')} сом
+                    </div>
 
-              <button
-                className="delete-button"
-                onClick={() => deleteAd(ad.id)}
-              >
-                Удалить
-              </button>
-            </article>
-          ))}
-
-          {filteredAds.length === 0 && (
-            <p>Объявлений пока нет.</p>
+                    {ad.id !== undefined && (
+                      <button
+                        type="button"
+                        className="delete-button"
+                        onClick={() => deleteAd(ad.id!)}
+                      >
+                         Удалить
+                      </button>
+                    )}
+                  </article>
+                ))
+              )}
+            </div>
           )}
-        </div>
-      </section>
-    </div>
+        </section>
+      </main>
+    </>
   );
 }
 
