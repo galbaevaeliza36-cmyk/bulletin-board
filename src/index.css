@@ -1,0 +1,116 @@
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 25px;
+  font-family: Arial, sans-serif;
+}
+
+header {
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+header h1 {
+  color: #285d42;
+}
+
+header p {
+  color: #666;
+}
+
+.form-section,
+.ads-section {
+  margin-bottom: 30px;
+  padding: 25px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+}
+
+h2 {
+  color: #285d42;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+input,
+textarea,
+select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 15px;
+}
+
+textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+button {
+  padding: 12px;
+  color: white;
+  background: #285d42;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #1e4832;
+}
+
+.search {
+  margin-bottom: 20px;
+}
+
+.ads-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.ad-card {
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+}
+
+.ad-card h3 {
+  color: #285d42;
+}
+
+.price {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.delete-button {
+  width: 100%;
+  background: #c0392b;
+}
+
+.delete-button:hover {
+  background: #962d22;
+}
+
+@media (max-width: 600px) {
+  .container {
+    padding: 12px;
+  }
+
+  .form-section,
+  .ads-section {
+    padding: 16px;
+  }
+
+  .ads-list {
+    grid-template-columns: 1fr;
+  }
+}
